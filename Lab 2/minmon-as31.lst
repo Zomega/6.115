@@ -1,0 +1,381 @@
+                   ;   *************************************************
+                   ;   *                                               *
+                   ;   *  MINMON - The Minimal 8051 Monitor Program    *
+                   ;   *                                               *
+                   ;   *  Portions of this program are courtesy of     *
+                   ;   *  Rigel Corporation, of Gainesville, Florida   *
+                   ;   *                                               *
+                   ;   *  Modified for 6.115                           *   
+                   ;   *  Massachusetts Institute of Technology        *
+                   ;   *  January, 2001  Steven B. Leeb                *
+                   ;   *                                               *
+                   ;   *************************************************
+0000:              .equ stack, 2fh           ; bottom of stack
+                                             ; - stack starts at 30h -
+0000:              .equ errorf, 0            ; bit 0 is error status
+                   ;===========================================================
+                   ; 8032 hardware vectors
+                   ;===========================================================
+0000:                 .org 00h               ; power up and reset vector
+0000: 02 01 00        ljmp start
+0003:                 .org 03h               ; interrupt 0 vector
+0003: 02 01 00        ljmp start
+000B:                 .org 0bh               ; timer 0 interrupt vector
+000B: 02 01 00        ljmp start
+0013:                 .org 13h               ; interrupt 1 vector
+0013: 02 01 00        ljmp start
+001B:                 .org 1bh               ; timer 1 interrupt vector
+001B: 02 01 00        ljmp start
+0023:                 .org 23h               ; serial port interrupt vector
+0023: 02 01 00        ljmp start
+002B:                 .org 2bh               ; 8052 extra interrupt vector
+002B: 02 01 00        ljmp start
+                   ;===========================================================
+                   ; begin main program
+                   ;===========================================================
+0100:                 .org     100h
+                   start:
+0100: C2 AF           clr     ea             ; disable interrupts
+0102: 12 01 3F        lcall   init           
+                   ; initialize hardware
+0105: 12 02 67        lcall   print          ; print welcome message
+0108: 0A 0D 57 65 
+      6C 63 6F 6D 
+      65 20 74 6F 
+      20 36 2E 31 
+      31 35 21 0A 
+      0D 4D 49 4E 
+      4D 4F 4E 3E 
+      20 00           .db 0ah, 0dh, "Welcome to 6.115!", 0ah, 0dh,"MINMON> ", 0
+                   monloop:
+0126: 75 81 2F        mov     sp,#stack      ; reinitialize stack pointer
+0129: C2 AF           clr     ea             ; disable all interrupts
+012B: C2 00           clr     errorf         ; clear the error flag
+012D: 12 02 67        lcall   print          ; print prompt
+0130: 0D 0A 2A 00 
+                      .db 0dh, 0ah,"*", 0h
+0134: C2 98           clr     ri             ; flush the serial input buffer
+0136: 12 02 2A        lcall   getcmd         ; read the single-letter command
+0139: FA              mov     r2, a          ; put the command number in R2
+013A: 02 02 46        ljmp    nway           ; branch to a monitor routine
+                   endloop:                  ; come here after command has fini
+013D: 80 E7           sjmp monloop           ; loop forever in monitor loop
+                   ;===========================================================
+                   ; subroutine init
+                   ; this routine initializes the hardware
+                   ; set up serial port with a 11.0592 MHz crystal,
+                   ; use timer 1 for 9600 baud serial communications
+                   ;===========================================================
+                   init:
+013F: 75 89 20        mov   tmod, #20h       ; set timer 1 for auto reload - mo
+0142: 75 88 41        mov   tcon, #41h       ; run counter 1 and set edge trig 
+0145: 75 8D FD        mov   th1,  #0fdh      ; set 9600 baud with xtal=11.059mh
+0148: 75 98 50        mov   scon, #50h       ; set serial control reg for 8 bit
+                                             ; and mode 1
+014B: 22              ret
+                   ;===========================================================
+                   ; monitor jump table
+                   ;===========================================================
+                   jumtab:
+014C: 01 EA           .dw badcmd             ; command '@' 00
+014E: 01 EA           .dw badcmd             ; command 'a' 01
+0150: 01 EA           .dw badcmd             ; command 'b' 02
+0152: 01 EA           .dw badcmd             ; command 'c' 03
+0154: 01 98           .dw downld             ; command 'd' 04 used
+0156: 01 EA           .dw badcmd             ; command 'e' 05
+0158: 01 EA           .dw badcmd             ; command 'f' 06
+015A: 01 82           .dw goaddr             ; command 'g' 07 used
+015C: 01 EA           .dw badcmd             ; command 'h' 08
+015E: 01 EA           .dw badcmd             ; command 'i' 09
+0160: 01 EA           .dw badcmd             ; command 'j' 0a
+0162: 01 EA           .dw badcmd             ; command 'k' 0b
+0164: 01 EA           .dw badcmd             ; command 'l' 0c
+0166: 01 EA           .dw badcmd             ; command 'm' 0d
+0168: 01 EA           .dw badcmd             ; command 'n' 0e
+016A: 01 EA           .dw badcmd             ; command 'o' 0f
+016C: 01 EA           .dw badcmd             ; command 'p' 10
+016E: 01 EA           .dw badcmd             ; command 'q' 11
+0170: 01 EA           .dw badcmd             ; command 'r' 12
+0172: 01 EA           .dw badcmd             ; command 's' 13
+0174: 01 EA           .dw badcmd             ; command 't' 14
+0176: 01 EA           .dw badcmd             ; command 'u' 15
+0178: 01 EA           .dw badcmd             ; command 'v' 16
+017A: 01 EA           .dw badcmd             ; command 'w' 17
+017C: 01 EA           .dw badcmd             ; command 'x' 18
+017E: 01 EA           .dw badcmd             ; command 'y' 19
+0180: 01 EA           .dw badcmd             ; command 'z' 1a
+                   
+                   ;***********************************************************
+                   ; monitor command routines
+                   ;***********************************************************
+                   ;===========================================================
+                   ; command goaddr  'g'
+                   ; this routine branches to the 4 hex digit address which fol
+                   ;===========================================================
+                   goaddr:
+0182: 12 02 18        lcall getbyt           ; get address high byte
+0185: FF              mov   r7, a            ; save in R7
+0186: 12 02 86        lcall prthex
+0189: 12 02 18        lcall getbyt           ; get address low byte
+018C: C0 E0           push  acc              ; push lsb of jump address
+018E: 12 02 86        lcall prthex
+0191: 12 02 7B        lcall crlf
+0194: EF              mov   a, r7            ; recall address high byte
+0195: C0 E0           push  acc              ; push msb of jump address
+0197: 22              ret                    ; do jump by doing a ret
+                   ;===========================================================
+                   ; command downld  'd'
+                   ; this command reads in an Intel hex file from the serial po
+                   ; and stores it in external memory.
+                   ;===========================================================
+                   downld:
+0198: 12 02 7B        lcall crlf
+019B: 74 3E           mov   a, #'>'          ; acknowledge by a '>'
+019D: 12 02 55        lcall sndchr
+                   dl:
+01A0: 12 02 5D        lcall getchr           ; read in ':'
+01A3: B4 3A FA        cjne  a,  #':', dl
+01A6: 12 01 E0        lcall getbytx          ; get hex length byte
+01A9: 60 21           jz    enddl            ; if length=0 then return
+01AB: F8              mov   r0, a            ; save length in r0
+01AC: 12 01 E0        lcall getbytx          ; get msb of address
+01AF: D2 E7           setb  acc.7            ; make sure it is in RAM
+01B1: F5 83           mov   dph, a           ; save in dph
+01B3: 12 01 E0        lcall getbytx          ; get lsb of address
+01B6: F5 82           mov   dpl, a           ; save in dpl
+01B8: 12 01 E0        lcall getbytx          ; read in special purpose byte (ig
+                   dloop:
+01BB: 12 01 E0        lcall getbytx          ; read in data byte
+01BE: F0              movx  @dptr, a         ; save in ext mem
+01BF: A3              inc   dptr             ; bump mem pointer
+01C0: D8 F9           djnz  r0, dloop        ; repeat for all data bytes in rec
+01C2: 12 01 E0        lcall getbytx          ; read in checksum
+01C5: 74 2E           mov   a,  #'.'
+01C7: 12 02 55        lcall sndchr           ; handshake '.'
+01CA: 80 D4           sjmp  dl               ; read in next record
+                   enddl:
+01CC: 12 01 E0        lcall getbytx          ; read in remainder of the
+01CF: 12 01 E0        lcall getbytx          ; termination record
+01D2: 12 01 E0        lcall getbytx
+01D5: 12 01 E0        lcall getbytx
+01D8: 74 2E           mov   a,  #'.'
+01DA: 12 02 55        lcall sndchr           ; handshake '.'
+01DD: 02 01 3D        ljmp  endloop          ; return
+                   getbytx:
+01E0: 12 02 18        lcall getbyt
+01E3: 20 00 01        jb    errorf, gb_err
+01E6: 22              ret
+                   gb_err:
+01E7: 02 02 00        ljmp badpar
+                   
+                   ;***********************************************************
+                   ; monitor support routines
+                   ;***********************************************************
+                   badcmd:
+01EA: 12 02 67        lcall print
+01ED: 0D 0A 20 62 
+      61 64 20 63 
+      6F 6D 6D 61 
+      6E 64 20 00 
+                      .db 0dh, 0ah," bad command ", 0h
+01FD: 02 01 3D        ljmp endloop
+                   badpar:
+0200: 12 02 67        lcall print
+0203: 0D 0A 20 62 
+      61 64 20 70 
+      61 72 61 6D 
+      65 74 65 72 
+      20 00           .db 0dh, 0ah," bad parameter ", 0h
+0215: 02 01 3D        ljmp endloop
+                   ;===========================================================
+                   ; subroutine getbyt
+                   ; this routine reads in an 2 digit ascii hex number from the
+                   ; serial port. the result is returned in the acc.
+                   ;===========================================================
+                   getbyt:
+0218: 12 02 5D        lcall getchr           ; get msb ascii chr
+021B: 12 02 AD        lcall ascbin           ; conv it to binary
+021E: C4              swap  a                ; move to most sig half of acc
+021F: F5 F0           mov   b,  a            ; save in b
+0221: 12 02 5D        lcall getchr           ; get lsb ascii chr
+0224: 12 02 AD        lcall ascbin           ; conv it to binary
+0227: 45 F0           orl   a,  b            ; combine two halves
+0229: 22              ret
+                   ;===========================================================
+                   ; subroutine getcmd
+                   ; this routine gets the command line.  currently only a
+                   ; single-letter command is read - all command line parameter
+                   ; must be parsed by the individual routines.
+                   ;
+                   ;===========================================================
+                   getcmd:
+022A: 12 02 5D        lcall getchr           ; get the single-letter command
+022D: C2 E5           clr   acc.5            ; make upper case
+022F: 12 02 55        lcall sndchr           ; echo command
+0232: C3              clr   C                ; clear the carry flag
+0233: 94 40           subb  a, #'@'          ; convert to command number
+0235: 50 03           jnc   cmdok1           ; letter command must be above '@'
+0237: 12 02 00        lcall badpar
+                   cmdok1:
+023A: C0 E0           push  acc              ; save command number
+023C: 94 1B           subb  a, #1Bh          ; command number must be 1Ah or le
+023E: 40 03           jc    cmdok2
+0240: 12 02 00        lcall badpar           ; no need to pop acc since badpar
+                                             ; initializes the system
+                   cmdok2:
+0243: D0 E0           pop   acc              ; recall command number
+0245: 22              ret
+                   ;===========================================================
+                   ; subroutine nway
+                   ; this routine branches (jumps) to the appropriate monitor
+                   ; routine. the routine number is in r2
+                   ;===========================================================
+                   nway:
+0246: 90 01 4C        mov   dptr, #jumtab    ;point dptr at beginning of jump t
+0249: EA              mov   a, r2            ;load acc with monitor routine num
+024A: 23              rl    a                ;multiply by two.
+024B: 04              inc   a                ;load first vector onto stack
+024C: 93              movc  a, @a+dptr       ;         "          "
+024D: C0 E0           push  acc              ;         "          "
+024F: EA              mov   a, r2            ;load acc with monitor routine num
+0250: 23              rl    a                ;multiply by two
+0251: 93              movc  a, @a+dptr       ;load second vector onto stack
+0252: C0 E0           push  acc              ;         "          "
+0254: 22              ret                    ;jump to start of monitor routine
+                   
+                   
+                   ;***********************************************************
+                   ; general purpose routines
+                   ;***********************************************************
+                   ;===========================================================
+                   ; subroutine sndchr
+                   ; this routine takes the chr in the acc and sends it out the
+                   ; serial port.
+                   ;===========================================================
+                   sndchr:
+0255: C2 99           clr  scon.1            ; clear the tx  buffer full flag.
+0257: F5 99           mov  sbuf,a            ; put chr in sbuf
+                   txloop:
+0259: 30 99 FD        jnb  scon.1, txloop    ; wait till chr is sent
+025C: 22              ret
+                   ;===========================================================
+                   ; subroutine getchr
+                   ; this routine reads in a chr from the serial port and saves
+                   ; in the accumulator.
+                   ;===========================================================
+                   getchr:
+025D: 30 98 FD        jnb  ri, getchr        ; wait till character received
+0260: E5 99           mov  a,  sbuf          ; get character
+0262: 54 7F           anl  a,  #7fh          ; mask off 8th bit
+0264: C2 98           clr  ri                ; clear serial status bit
+0266: 22              ret
+                   ;===========================================================
+                   ; subroutine print
+                   ; print takes the string immediately following the call and
+                   ; sends it out the serial port.  the string must be terminat
+                   ; with a null. this routine will ret to the instruction
+                   ; immediately following the string.
+                   ;===========================================================
+                   print:
+0267: D0 83           pop   dph              ; put return address in dptr
+0269: D0 82           pop   dpl
+                   prtstr:
+026B: E4              clr  a                 ; set offset = 0
+026C: 93              movc a,  @a+dptr       ; get chr from code memory
+026D: B4 00 02        cjne a,  #0h, mchrok   ; if termination chr, then return
+0270: 80 06           sjmp prtdone
+                   mchrok:
+0272: 12 02 55        lcall sndchr           ; send character
+0275: A3              inc   dptr             ; point at next character
+0276: 80 F3           sjmp  prtstr           ; loop till end of string
+                   prtdone:
+0278: 74 01           mov   a,  #1h          ; point to instruction after strin
+027A: 73              jmp   @a+dptr          ; return
+                   ;===========================================================
+                   ; subroutine crlf
+                   ; crlf sends a carriage return line feed out the serial port
+                   ;===========================================================
+                   crlf:
+027B: 74 0A           mov   a,  #0ah         ; print lf
+027D: 12 02 55        lcall sndchr
+                   cret:
+0280: 74 0D           mov   a,  #0dh         ; print cr
+0282: 12 02 55        lcall sndchr
+0285: 22              ret
+                   ;===========================================================
+                   ; subroutine prthex
+                   ; this routine takes the contents of the acc and prints it o
+                   ; as a 2 digit ascii hex number.
+                   ;===========================================================
+                   prthex:
+0286: C0 E0           push acc
+0288: 12 02 95        lcall binasc           ; convert acc to ascii
+028B: 12 02 55        lcall sndchr           ; print first ascii hex digit
+028E: EA              mov   a,  r2           ; get second ascii hex digit
+028F: 12 02 55        lcall sndchr           ; print it
+0292: D0 E0           pop acc
+0294: 22              ret
+                   ;===========================================================
+                   ; subroutine binasc
+                   ; binasc takes the contents of the accumulator and converts 
+                   ; into two ascii hex numbers.  the result is returned in the
+                   ; accumulator and r2.
+                   ;===========================================================
+                   binasc:
+0295: FA              mov   r2, a            ; save in r2
+0296: 54 0F           anl   a,  #0fh         ; convert least sig digit.
+0298: 24 F6           add   a,  #0f6h        ; adjust it
+029A: 50 02           jnc   noadj1           ; if a-f then readjust
+029C: 24 07           add   a,  #07h
+                   noadj1:
+029E: 24 3A           add   a,  #3ah         ; make ascii
+02A0: CA              xch   a,  r2           ; put result in reg 2
+02A1: C4              swap  a                ; convert most sig digit
+02A2: 54 0F           anl   a,  #0fh         ; look at least sig half of acc
+02A4: 24 F6           add   a,  #0f6h        ; adjust it
+02A6: 50 02           jnc   noadj2           ; if a-f then re-adjust
+02A8: 24 07           add   a,  #07h
+                   noadj2:
+02AA: 24 3A           add   a,  #3ah         ; make ascii
+02AC: 22              ret
+                   
+                   ;===========================================================
+                   ; subroutine ascbin
+                   ; this routine takes the ascii character passed to it in the
+                   ; acc and converts it to a 4 bit binary number which is retu
+                   ; in the acc.
+                   ;===========================================================
+                   ascbin:
+02AD: C2 00           clr   errorf
+02AF: 24 D0           add   a,  #0d0h        ; if chr < 30 then error
+02B1: 50 17           jnc   notnum
+02B3: C3              clr   c                ; check if chr is 0-9
+02B4: 24 F6           add   a,  #0f6h        ; adjust it
+02B6: 40 03           jc    hextry           ; jmp if chr not 0-9
+02B8: 24 0A           add   a,  #0ah         ; if it is then adjust it
+02BA: 22              ret
+                   hextry:
+02BB: C2 E5           clr   acc.5            ; convert to upper
+02BD: C3              clr   c                ; check if chr is a-f
+02BE: 24 F9           add   a,  #0f9h        ; adjust it
+02C0: 50 08           jnc   notnum           ; if not a-f then error
+02C2: C3              clr   c                ; see if char is 46 or less.
+02C3: 24 FA           add   a,  #0fah        ; adjust acc
+02C5: 40 03           jc    notnum           ; if carry then not hex
+02C7: 54 0F           anl   a,  #0fh         ; clear unused bits
+02C9: 22              ret
+                   notnum:
+02CA: D2 00           setb  errorf           ; if not a valid digit
+02CC: 02 01 3D        ljmp  endloop
+                   
+                   
+                   ;===========================================================
+                   ; mon_return is not a subroutine.  
+                   ; it simply jumps to address 0 which resets the system and 
+                   ; invokes the monitor program.
+                   ; A jump or a call to mon_return has the same effect since 
+                   ; the monitor initializes the stack.
+                   ;===========================================================
+                   mon_return:
+02CF: 02 00 00        ljmp  0
+                   ; end of MINMON
