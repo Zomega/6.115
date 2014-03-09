@@ -1,0 +1,57 @@
+0000:              .org 0000h
+                   start:
+0000: 78 10                 mov r0, #0010h ; Should be well above the strike ra
+0002: 79 00                 mov r1, #00h
+                            
+0004: 90 FE 03              mov dptr,   #0FE03h
+0007: 74 3E                 mov a, #03Eh
+0009: F0                    movx @dptr, a
+                            
+000A: 75 F0 10              mov b, #0010h
+                            coarse_loop:
+000D: 12 00 3F                      lcall add_b
+0010: 12 00 37                      lcall set_clk_f
+0013: 12 00 2E                      lcall delay
+0016: 12 00 48                      lcall get_state
+0019: 70 F2                         jnz coarse_loop
+001B: 75 F0 01              mov b, #0001h
+                            fine_loop:
+001E: 12 00 3F                      lcall add_b
+0021: 12 00 37                      lcall set_clk_f
+0024: 12 00 2E                      lcall delay
+0027: 12 00 48                      lcall get_state
+002A: 60 F2                         jz fine_loop
+                            lit_loop:
+002C: 80 FE                         sjmp lit_loop ; Hopefully the lamp is lit!
+                   
+                   delay:
+002E: 7B FF                 mov r3, #0FFh
+0030: 7C 40                 mov r4, #040h
+                            delay_loop:
+0032: DB FE                         djnz r3, delay_loop
+0034: DC FC                         djnz r4, delay_loop
+0036: 22                    ret
+                   
+                   set_clk_f:
+0037: 90 FE 00              mov dptr,   #0FE00h
+003A: E8                    mov a, r0
+003B: F0                    movx @dptr,  a
+003C: E9                    mov a, r1
+003D: F0                    movx @dptr,  a
+003E: 22                    ret
+                            
+                   add_b:
+003F: E8                    mov a, r0
+0040: 25 F0                 add a, b
+0042: F8                    mov r0, a
+0043: E9                    mov a, r1
+0044: 34 00                 addc a, #0h
+0046: F9                    mov r1, a
+0047: 22                    ret
+                            
+                   get_state:
+                                    ;mov P1, #001h
+0048: E5 90                         mov a, P1
+004A: 54 01                         anl a, #01h
+004C: 22                            ret
+                                    

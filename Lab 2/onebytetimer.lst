@@ -1,0 +1,10 @@
+0000: 90 90 00     mov dptr, #9000h
+0003: E0           movx a, @dptr
+0004: F8           mov r0, a
+                   start:
+0005: B2 90                 cpl P1.0
+0007: E8                    mov a, r0
+0008: F9                    mov r1, a
+                            wait:
+0009: D9 FE                         djnz r1, wait
+000B: 80 F8                 sjmp start

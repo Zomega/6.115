@@ -1,0 +1,10 @@
+0000:              .org 000h
+                   start:
+0000: 74 00        mov a, #0h
+0002: 85 E0 90     mov P1, acc
+0005: D2 92        setb 92h
+0007: 80 F7        sjmp start
+0009: 36 2E 31 31 
+      35 20 52 6F 
+      63 6B 73 21 
+                   .db "6.115 Rocks!"

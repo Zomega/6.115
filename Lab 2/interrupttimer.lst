@@ -1,0 +1,14 @@
+0000:              .org 0000h
+0000: 02 01 00     ljmp main
+000B:              .org 000Bh
+                   T0ISR:
+000B: B2 90                 cpl P1.0
+000D: 32                    reti
+0100:              .org 0100h
+                   main:
+0100: 75 89 02              mov  tmod, #002h
+0103: 75 8C 00              mov  th0,  #000h
+0106: 75 8A 01              mov  tl0,  #001h
+0109: D2 8C                 setb tr0
+010B: 75 A8 82              mov  ie,   #082h
+010E: 80 FE                 loop: sjmp loop

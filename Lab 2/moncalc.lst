@@ -1,0 +1,47 @@
+                     ; We need to load our values from 9000 and 9001 into r0 an
+                   
+0000: 90 90 00     mov dptr, #9000h
+0003: E0           movx a, @dptr
+0004: F8           mov r0, a
+                   
+0005: 90 90 01     mov dptr, #9001h
+0008: E0           movx a, @dptr
+0009: F9           mov r1, a
+                   
+                   ; ADD
+000A: E8           mov   a, r0
+000B: 29           add   a, r1  ; add the first value to r1 in acc
+000C: 75 F0 00     mov   b, #0h
+000F: 90 90 02     mov   dptr, #9002h
+0012: 11 33        acall saveab ; Notice that acall is used rather than lcall.
+                   
+                   ; SUB
+0014: E8           mov   a, r0
+0015: 99           subb  a, r1
+0016: 75 F0 00     mov   b, #0h
+0019: 90 90 04     mov   dptr, #9004h
+001C: 11 33        acall saveab
+                   
+                   ; MUL
+001E: E8           mov   a, r0 ; reload a with r0
+001F: 89 F0        mov   b, r1 ; set up b with r1
+0021: A4           mul   ab ; mutiply the two numbers
+0022: 90 90 06     mov   dptr, #9006h
+0025: 11 33        acall saveab
+                   
+                   ; DIV
+0027: E8           mov   a, r0 ; again set up a with r0
+0028: 89 F0        mov   b, r1 ; set up b with r1
+002A: 84           div   ab ; divide a by b
+002B: 90 90 08     mov   dptr, #9008h
+002E: 11 33        acall saveab
+                   
+                   ; RESET
+0030: 02 00 00     ljmp 0h ; jump back to MinMon
+                   
+                   saveab:
+0033: F0             movx @dptr, a
+0034: A3             inc dptr
+0035: E5 F0          mov a, b
+0037: F0             movx @dptr, a
+0038: 22             ret
