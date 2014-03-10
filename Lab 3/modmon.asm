@@ -110,17 +110,17 @@ jumtab:
 ; prints it's contents back to the console.
 ;===============================================================
 readcmd:
-   lcall getbyt           ; get address high byte
-   mov   dph, a
-   lcall prthex
-   lcall getbyt           ; get address low byte
-   mov   dpl, a
-   lcall prthex
-   lcall crlf
-   ; now load and print the data at dptr
-   movx  a, @dptr
-   lcall prthex
-   ljmp  endloop
+	lcall getbyt           ; get address high byte
+	mov   dph, a
+	lcall prthex
+	lcall getbyt           ; get address low byte
+	mov   dpl, a
+	lcall prthex
+	lcall crlf
+	; now load and print the data at dptr
+	movx  a, @dptr
+	lcall prthex
+	ljmp  endloop
 
 ;===============================================================
 ; command writecmd 'w'
@@ -128,20 +128,20 @@ readcmd:
 ; writes the given value to it.
 ;===============================================================
 writecmd:
-   lcall getbyt           ; get address high byte
-   mov   dph, a
-   lcall prthex
-   lcall getbyt           ; get address low byte
-   mov   dpl, a
-   lcall prthex
-   mov a, #61d
-   lcall sndchr           ; print =
-   lcall getbyt           ; get value we will write ( stored in acc )
-   mov r7, a
-   lcall prthex
-   mov a, r7
-   movx  @dptr, a
-   ljmp endloop
+	lcall getbyt           ; get address high byte
+	mov   dph, a
+	lcall prthex
+	lcall getbyt           ; get address low byte
+	mov   dpl, a
+	lcall prthex
+	mov a, #61d
+	lcall sndchr           ; print =
+	lcall getbyt           ; get value we will write ( stored in acc )
+	mov r7, a
+	lcall prthex
+	mov a, r7
+	movx  @dptr, a
+	ljmp endloop
 
 ;===============================================================
 ; command tablecmd 't'
@@ -187,6 +187,7 @@ goaddr:
    mov   a, r7            ; recall address high byte
    push  acc              ; push msb of jump address
    ret                    ; do jump by doing a ret
+
 ;===============================================================
 ; command downld  'd'
 ; this command reads in an Intel hex file from the serial port
