@@ -55,9 +55,9 @@ warn_string:		.db 0ah, 0dh, "WARNING: ", 0h
 ;=================================================================
 panic:
 	mov dptr, #panic_string
-	lcall push_pointer
+	lcall pointer_push
 	lcall string_print
-	lcall pop_pointer
+	lcall pointer_pop
 
 	; Because panic does not return, we can
 	; screw up the stack without compunction.
@@ -79,22 +79,21 @@ start:
 	lcall   init           ; initialize hardware
 
 	;mov dptr, #test_panic_string
-	;lcall push_pointer
+	;lcall pointer_push
 	;lcall panic
 	;test_panic_string: .db "TESTING TESTING 123, this is a test", 0h
 
-   lcall   print
-   .db "Pushing...", 0h
 	mov dptr, #welcome_string
-	lcall push_pointer
-   lcall   print
-   .db "Popping...", 0h
-   lcall pop_pointer
+   lcall pointer_push
+	lcall argtest
+	lcall pointer_pop
 
-   lcall push_pointer
-	lcall string_print
-	lcall pop_pointer
-
+   blahloop:
+      sjmp blahloop
+   argtest:
+      mov a, #0
+      lcall pointer_arg
+      ret
 monloop:
 	mov     sp,#stack      ; reinitialize stack pointer
 	clr     ea             ; disable all interrupts
@@ -432,7 +431,7 @@ char_read:
 ;================================================================
 ; Push a pointer ( passed in dptr ) onto the stack.
 ;================================================================
-push_pointer:
+pointer_push:
    lcall pointer_print
    lcall crlf
    pop acc
@@ -446,7 +445,7 @@ push_pointer:
 ;================================================================
 ; Pop a pointer off the stack into dptr
 ;================================================================
-pop_pointer:
+pointer_pop:
    pop acc
    pop b
    pop dph
@@ -461,7 +460,7 @@ pop_pointer:
 ; Copy a pointer off the stack into dptr. Offset passed in a.
 ; Destroys a and R0.
 ;================================================================
-arg_pointer:
+pointer_arg:
    mov R0, a
    add a, #002h ; There's another return frame.
    lcall arg
@@ -499,7 +498,7 @@ pointer_print:
 string_print:
 
 	mov a, #0h ; Put the passed char* in dptr
-	lcall arg_pointer
+	lcall pointer_arg
    lcall pointer_print
 
 	string_print_prtstr:
